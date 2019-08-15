@@ -20,7 +20,7 @@ DEC_LUT dd 1000000000,100000000,10000000,1000000,100000,10000,1000,100,10,1,0
 
     section .text
 
-_atoi@4 ;param1: arrayptr; return num
+_atoi@4: ;param1: arrayptr; return num
     push ebp
     mov ebp, esp
 

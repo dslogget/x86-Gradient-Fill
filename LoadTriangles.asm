@@ -59,11 +59,12 @@ _ReadFloat@4: ;filepath
     fistp dword [esp]
     pop ecx  
 
-    add ecx, dword 1
 
     push edi
     mov edi, dword 10
-    mov eax, dword 1
+    mov eax, dword 10
+    cmp ecx, 0
+    je ReadFloat_lp_end
 ReadFloat_lp_start:
     loop ReadFloat_lp
     jmp ReadFloat_lp_end
