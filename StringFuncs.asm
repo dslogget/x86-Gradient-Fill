@@ -1,6 +1,8 @@
     global _uitoa@8
     global _strlen@4
     global _atoui@4
+    global _itoa@8
+    global _ftoa@8
 
     extern _debug
     extern _printEAX
@@ -14,6 +16,7 @@
 DEC_LUT dd 1000000000,100000000,10000000,1000000,100000,10000,1000,100,10,1,0
 
 
+
     section .text
 
 _atoui@4: ;param1: arrayptr; return num
@@ -21,20 +24,6 @@ _atoui@4: ;param1: arrayptr; return num
     mov ebp, esp
     push ebx
     push esi
-
-  ;push dword [ebp + 8]
-  ;call _strlen@4
-  ;push dword 0
-  ;mov edx, esp
-
-  ;push dword 0                               ; lpReserved = null
-  ;push dword edx                              ; lpNumberOfCharsWritten = pointer to "other"
-  ;push dword eax                              ; nNumberOfCharsToWrite = length of "msg"
-  ;push dword [ebp + 8]                              ; lpBuffer = pointer to "msg"
-  ;push dword [h_stdout]                       ; hConsoleOutput = console handle from GetStdHandle
-  ;call _WriteConsoleA@20                      ; Write string
-  ;call _printCRLF
-  ;add esp, 4
 
     mov ebx, dword 0
     mov eax, dword 0
@@ -73,6 +62,98 @@ atoui_exit:
     mov esp, ebp
     pop ebp
     ret 4
+
+_ftoa@8: ;buf, float; ret len
+    push ebp
+    mov ebp, esp
+    push ebx
+    push edi
+    sub esp, 8
+
+    mov ebx, [ebp + 8]
+    mov dword [ebp -4*2 - 8], 0
+
+    lea edi, [ebp + 12]
+    fld dword [edi]
+    lea edi, [ebp -4*2 - 4]
+    fisttp dword [edi]
+
+    push dword [ebp -4*2 - 4]
+    push dword ebx
+    call _itoa@8
+    add [ebp -4*2 - 8], eax
+    add ebx, eax
+
+    ;cmp eax, 1
+    ;je ftoa_exit
+
+    ;call _printEAX
+    ;call _printCRLF
+
+    lea edi, [ebp + 12]
+    fld dword [edi]
+    lea edi, [ebp -4*2 - 4]
+    fisub dword [edi]
+    mov dword [ebp -4*2 - 4], 1000000000
+    fimul dword [edi]
+    fistp dword [edi]
+
+    ;jmp ftoa_exit
+    mov byte [ebx], '.'
+    add ebx, 1
+    add dword [ebp -4*2 - 8], 1 
+
+    push dword [ebp -4*2 - 4]
+    push dword ebx
+    call _uitoa@8
+
+ftoa_exit:
+    add eax, [ebp -4*2 - 8]
+    add ebx, eax
+
+    add esp, 8
+    pop edi
+    pop ebx
+    mov ebp, esp
+    pop ebp
+    ret 8
+
+
+_itoa@8: ;param1: buf ;param2:int ;return length
+    push ebp
+    mov ebp, esp
+    push ebx
+    push edi
+    sub esp, 4
+
+    mov ebx, dword [ebp + 8]
+    mov edi, dword [ebp + 12]
+
+itoa_if1:                 
+    cmp edi, 0
+    jge itoa_else1
+    neg edi
+    mov byte [ebx], '-'
+    add ebx, dword 1
+    mov [ebp -4*2 - 4], dword 1
+    jmp itoa_endif1
+itoa_else1:
+    mov [ebp -4*2 - 4], dword 0
+itoa_endif1: 
+
+    push dword edi
+    push dword ebx
+    call _uitoa@8
+    add eax, dword [ebp -4*2 - 4]
+
+
+    add esp, 4
+    pop edi
+    pop ebx
+    mov esp, ebp
+    pop ebp
+    ret 8
+
 
 
 _uitoa@8: ;param1: buf ;param2:int ;return length

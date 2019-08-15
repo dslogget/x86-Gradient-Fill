@@ -1,8 +1,11 @@
     
     global _init
+
     extern _debug
     extern _printEAX
-    extern _LoadTriangles@16
+    extern _LoadTriangles@24 ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
+    extern _ReadNextNumber@4
+    extern _CloseFileHandle@0
 
     %include "WIN32N.INC"
     %include "WIN32FUNCS.INC"
@@ -14,9 +17,16 @@
     
     section .rdata
 className db "MyWindowClass",0
-
+settingsfile db "Settings.txt",0
 
     section .data
+
+windowHeight:    dd 500
+windowWidth:     dd 500
+
+
+
+
 
 hInst dd 0
 pVertices   dd 0
@@ -50,11 +60,13 @@ _wndProc@16:
     jz case4
     jmp dft
 case1:
+    push dword [windowHeight]
+    push dword [windowWidth]
     push nMeshes
     push pMeshes
     push nVertices
     push pVertices
-    call _LoadTriangles@16 ;ppVertices, pnVertices, ppMeshes, pnMeshes
+    call _LoadTriangles@24 ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
     jmp break
 case2:
     jmp break
@@ -86,7 +98,7 @@ skip:
     push dword [esi]
     call _SelectObject@8
 
-    push dword 10
+    push dword 720-27
     push dword 10
     push dword 0
     push dword 0
@@ -99,16 +111,16 @@ skip:
     push edi
     mov edi, dword [nVertices]
     mov eax, dword edi
-    call _printEAX
+    ;call _printEAX
 
     mov edi, dword [nMeshes]
 
     mov eax, dword edi
-    call _printEAX
+    ;call _printEAX
 
     mov edi, dword [pMeshes]
     mov eax, dword [edi]
-    call _printEAX
+    ;call _printEAX
 
 
     pop edi
@@ -153,6 +165,17 @@ pexit:
 
 
 _init:
+
+    push settingsfile
+    call _ReadNextNumber@4
+    mov [windowWidth], dword eax
+    push settingsfile
+    call _ReadNextNumber@4
+    mov [windowHeight], dword eax
+    call _CloseFileHandle@0
+
+
+
     push ebp
     mov ebp, esp
     push ebx
@@ -191,8 +214,8 @@ _init:
     push dword [hInst] ;hInst
     push dword 0
     push dword 0
-    push dword 500
-    push dword 500
+    push dword [windowHeight]
+    push dword [windowWidth]
     push dword 0x80000000
     push dword 0x80000000
     push wndStyle

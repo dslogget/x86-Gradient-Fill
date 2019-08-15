@@ -3,9 +3,13 @@
     extern h_stdout
     extern _atoui@4
     extern _printCRLF
+    extern windowHeight
+    extern windowWidth
 
-    global _ReadNextNumber@0
-    global _LoadTriangles@16 ;ppVertices, pnVertices, ppMeshes, pnMeshes
+    global _ReadNextNumber@4
+    global _LoadTriangles@24 ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
+    global _ReadFloat@4
+    global _CloseFileHandle@0
     
     %include "WIN32N.INC"
     %include "WIN32FUNCS.INC"
@@ -14,6 +18,8 @@
 
     section .rdata
 filename    db "./test.txt", 0
+fl0_5 dd 0.5
+max_col_intensity dw 0xFF00
 
     section .data
 h_file      dd 0
@@ -21,15 +27,69 @@ h_file      dd 0
     section .text
 
 
-_ReadNextNumber@0:
+
+_ReadFloat@4: ;filepath
+    push ebp
+    mov ebp, esp
+    
+
+    push dword [ebp + 8]
+    call _ReadNextNumber@4
+
+    push eax
+    fild dword [esp]
+    pop eax
+
+    push dword [ebp + 8]
+    call _ReadNextNumber@4
+
+    cmp eax, dword 0
+    je ReadFloat_exit
+
+    push eax
+
+    ;get bits needed to shift
+    fldlg2
+    fild dword [esp]
+    fyl2x 
+    fadd dword [fl0_5]
+    frndint
+    push dword 0
+    fistp dword [esp]
+    pop ecx  
+
+    add ecx, dword 1
+
+    push edi
+    mov edi, dword 10
+    mov eax, dword 1
+ReadFloat_lp_start:
+    loop ReadFloat_lp
+    jmp ReadFloat_lp_end
+ReadFloat_lp:
+    mul edi
+    jmp ReadFloat_lp_start
+ReadFloat_lp_end:
+    pop edi
+
+    fild dword [esp]
+    push eax
+    fidiv dword [esp]
+    fadd
+    add esp, 4
+ReadFloat_exit:
+    mov esp, ebp
+    pop ebp
+    ret 4
+
+
+_ReadNextNumber@4: ;filepath
     push ebp
     mov ebp, esp
     push esi
     sub esp, 8 ;numreached, numBytesRead
     sub esp, buflen ;buffer
-    
-
-    mov [ebp - 4], dword 0
+    mov [ebp -4*1 - 4], dword 0
 
 ReadNextNumber_if1:
     cmp dword [h_file], 0
@@ -41,7 +101,7 @@ ReadNextNumber_if1:
     push dword 0
     push dword FILE_SHARE_READ
     push dword GENERIC_READ
-    push dword filename
+    push dword [ebp + 8];
     call _CreateFileA@28
     mov dword [h_file], eax
     jmp ReadNextNumber_endif1
@@ -61,10 +121,10 @@ ReadNextNumber_skip:
     mov esi, dword 0
 ReadNextNumber_lp:
     push dword 0
-    lea eax, [ebp - 8]
+    lea eax, [ebp -4*1 - 8]
     push dword eax
     push dword 1
-    lea eax, [ebp - 8 - buflen + esi]
+    lea eax, [ebp -4*1 - 8 - buflen + esi]
     push dword eax
     push dword [h_file]
     call _ReadFile@20
@@ -79,46 +139,36 @@ ReadNextNumber_skip2:
 
 
 ReadNextNumber_if2:
-    cmp [ebp - 8], dword 0
+    cmp [ebp -4*1 - 8], dword 0
     ja ReadNextNumber_endif2
 ReadNextNumber_ret:
 
-    cmp [ebp - 4], dword 0
+    cmp [ebp -4*1 - 4], dword 0
     jne ReadNextNumber_next
     mov eax, dword -1
     jmp ReadNextNumber_exit
 ReadNextNumber_next:
 
-    lea eax, [ebp - 8 - buflen + esi]
+    lea eax, [ebp -4*1 - 8 - buflen + esi]
     mov byte [eax], 0
-    lea eax, [ebp - 8 - buflen]
+    lea eax, [ebp -4*1 - 8 - buflen]
     push dword eax
     call _atoui@4
     jmp ReadNextNumber_exit
 ReadNextNumber_endif2: 
 
-lea eax, [ebp - 8 - buflen + esi]
+lea eax, [ebp -4*1 - 8 - buflen + esi]
 ReadNextNumber_if3:
     cmp byte [eax], '0'
     jb ReadNextNumber_elseif3_1
     cmp byte [eax], '9'
     ja ReadNextNumber_elseif3_1
-    mov [ebp - 4], dword 1
+    mov [ebp -4*1 - 4], dword 1
     jmp ReadNextNumber_endif3
 ReadNextNumber_elseif3_1:
-    cmp [ebp - 4], dword 0
+    cmp [ebp -4*1 - 4], dword 0
     jne ReadNextNumber_ret
 ReadNextNumber_endif3:
-
-    ;push dword  0                               ; lpReserved = null
-    ;lea eax, [ebp - 8]
-    ;push dword eax                             ; lpNumberOfCharsWritten = pointer to "other"
-    ;push dword 1                              ; nNumberOfCharsToWrite = length of "msg"
-    ;lea eax, [ebp - 32 + esi]
-    ;push dword eax                              ; lpBuffer = pointer to "msg"
-    ;push dword [h_stdout]                       ; hConsoleOutput = console handle from GetStdHandle
-    ;call _WriteConsoleA@20                      ; Write string
-    
     
     add esi, 1
 
@@ -134,22 +184,24 @@ ReadNextNumber_exit:
     pop esi
     mov esp, ebp
     pop ebp
-    ret 
+    ret 4
 
 
 
 
 
-_LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
+_LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
     push ebp
     mov ebp, esp
     push edi
     sub esp, 4
 
     call _GetProcessHeap@0
-    mov dword [ebp - 4], dword eax
+    mov dword [ebp -4*1 - 4], dword eax
 
-    call _ReadNextNumber@0
+    push filename
+    call _ReadNextNumber@4
+
     mov ecx, dword [ebp + 12]
     mov [ecx], dword eax
 
@@ -157,7 +209,7 @@ _LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
     mul edi
     push eax
     push dword 0
-    push dword [ebp - 4]
+    push dword [ebp -4*1 - 4]
     call _HeapAlloc@12
 
 
@@ -166,8 +218,9 @@ _LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
 
 
 
+    push filename
+    call _ReadNextNumber@4
 
-    call _ReadNextNumber@0
     mov ecx, dword [ebp + 20]
     mov [ecx], dword eax
 
@@ -175,7 +228,7 @@ _LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
     mul edi
     push eax
     push dword 0
-    push dword [ebp - 4]
+    push dword [ebp -4*1 - 4]
     call _HeapAlloc@12
 
     mov ecx, dword [ebp + 16]
@@ -187,31 +240,64 @@ _LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
     mov eax, dword [ebp + 8]
     mov edi, dword [eax]
 
+    sub dword [ebp + 8 + 5*4], 30
     
     LoadTriangles_loop1:
     push ecx
-        call _ReadNextNumber@0
-        mov dword [edi], eax
+    ;x
+        push filename
+        call _ReadFloat@4
+        push dword [ebp + 8 + 4*4]
+        fimul dword [esp]
+        fistp dword [edi]
+
         add edi, 4
-        call _ReadNextNumber@0
-        mov dword [edi], eax
+        add esp, 4
+
+    ;y
+        push filename
+        call _ReadFloat@4
+        push dword [ebp + 8 + 5*4]
+        fimul dword [esp]
+        fistp dword [edi]
+        ;sub dword [edi], 25
+
         add edi, 4
-        call _ReadNextNumber@0
-        mov word [edi], ax
+        add esp, 4
+
+    ;R
+        push filename
+        call _ReadFloat@4
+        fimul word [max_col_intensity]
+        fistp word [edi]
+
         add edi, 2
-        call _ReadNextNumber@0
-        mov word [edi], ax
+
+    ;G
+        push filename
+        call _ReadFloat@4
+        fimul word [max_col_intensity]
+        fistp word [edi]
+
         add edi, 2
-        call _ReadNextNumber@0
-        mov word [edi], ax
+    ;B
+        push filename
+        call _ReadFloat@4
+        fimul word [max_col_intensity]
+        fistp word [edi]
+
         add edi, 2
-        call _ReadNextNumber@0
-        mov word [edi], ax
+    ;A
+        push filename
+        call _ReadFloat@4
+        fimul word [max_col_intensity]
+        fistp word [edi]
+
         add edi, 2
-        ;call _printEAX
-        ;call _printCRLF
+
     pop ecx
-    loop LoadTriangles_loop1
+    sub ecx, 1
+    jnz LoadTriangles_loop1
 
     ; Start populating meshes
     mov edi, dword [ebp + 20]
@@ -222,13 +308,16 @@ _LoadTriangles@16: ;ppVertices, pnVertices, ppMeshes, pnMeshes
     
     LoadTriangles_loop2:
     push ecx
-        call _ReadNextNumber@0
+        push filename
+        call _ReadNextNumber@4
         mov dword [edi], eax
         add edi, 4
-        call _ReadNextNumber@0
+        push filename
+        call _ReadNextNumber@4
         mov dword [edi], eax
         add edi, 4
-        call _ReadNextNumber@0
+        push filename
+        call _ReadNextNumber@4
         mov dword [edi], eax
         add edi, 4
     pop ecx
@@ -244,5 +333,9 @@ LoadTriangles_exit:
     ret 16
 
 
-
+_CloseFileHandle@0:
+    push dword [h_file]
+    call _CloseHandle@4
+    mov [h_file], dword 0
+    ret
 

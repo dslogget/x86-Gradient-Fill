@@ -3,18 +3,22 @@
     global _printEAX
     global _printCRLF
 
-    global h_stdout
+    ;global h_stdout
 
 
     %include "WIN32N.INC"
     %include "WIN32FUNCS.INC"
 
 
-    extern _ReadNextNumber@0
+    extern _ReadNextNumber@4
     extern _atoui@4
     extern _init
     extern _uitoa@8
     extern _strlen@4
+    extern _itoa@8
+    extern _ftoa@8
+    extern _ReadFloat@4
+    extern _CloseFileHandle@0
 
     extern _LoadTriangles@16 ;ppVertices, pnVertices, ppMeshes, pnMeshes
 
@@ -23,22 +27,29 @@
 
 debug_str db "Here",10,13
 debug_str_len equ $-debug_str
-
 tstbfr db "123",0
+
+fptestname db "fp.txt",0
+
+
+fl0_5 dd 0.5
 
     section .bss
 buf        resb 128
 buflen  equ $-buf
+
+outputbuf   resb 128
+outputbuflen equ $-outputbuf
+
+
 
     section .data
 h_stdout    dd 0
 h_stdin     dd 0
 h_stderr    dd 0
 
-pVertices   dd 0
-nVertices   dd 0
-pMeshes     dd 0
-nMeshes     dd 0
+
+fl dd 1000.0
 
     section .text
 
@@ -54,9 +65,9 @@ _printEAX:
 
     push dword eax
     push dword buf
-    call _uitoa@8
+    call _itoa@8
 
-    lea edx, [ebp - 4]
+    lea edx, [ebp - 4*5]
     push dword  0                               ; lpReserved = null
     push dword edx                              ; lpNumberOfCharsWritten = pointer to "other"
     push dword eax                              ; nNumberOfCharsToWrite = length of "msg"
@@ -87,7 +98,7 @@ _printCRLF:
     mov [buf], byte 10
     mov [buf + 1], byte 13
 
-    lea edx, [ebp - 4]
+    lea edx, [ebp - 4*5]
     push dword  0                               ; lpReserved = null
     push dword edx                              ; lpNumberOfCharsWritten = pointer to "other"
     push dword 2                              ; nNumberOfCharsToWrite = length of "msg"
@@ -141,8 +152,6 @@ _start:
     sub esp, 4
     mov [ebp], dword 0
 
-
-
     push buflen
     push dword 0
     push buf
@@ -153,58 +162,28 @@ _start:
     call _initHandles
 
 
+    push fptestname
+    call _ReadFloat@4
+    fstp dword [fl]
+    call _CloseFileHandle@0
 
-    ;mov eax, dword [nVertices]
-    ;call _printEAX
-    ;call _printCRLF
-    ;mov eax, dword [nMeshes]
-    ;call _printEAX
-    ;call _printCRLF
-    
+
+
+    push dword [fl]
+    push dword outputbuf
+    call _ftoa@8
+    push dword eax
+    call _printOutputBuf@4
+
+    ;jmp start_exit
 
     push dword [h_stdin]
     call _FlushConsoleInputBuffer@4
 
-    ;push tstbfr
-    ;call _atoui@4
-
-    ;add eax, 1
-
-    ;call _printEAX
-
-
-    ;;lea edx, [ebp + 4]
-    ;;push dword 0
-    ;;push dword edx
-    ;;push dword buflen
-    ;;push dword buf
-    ;;push dword [h_stdin]
-    ;;call _ReadConsoleA@20
-
-    ;;lea eax, [buf - 2]
-    ;;add eax, [ebp + 4]
-    ;;mov [eax], byte 0
-
-    ;;push dword buf
-    ;;call _strlen
-    ;;add esp, 4
 
     call _init
 
-    ;call _GetLastError@0
-
-    ;push dword eax
-    ;push dword buf
-    ;call _uitoa@8
-
-    ;lea edx, [ebp + 4]
-    ;push dword  0                               ; lpReserved = null
-    ;push dword edx                              ; lpNumberOfCharsWritten = pointer to "other"
-    ;push dword eax                              ; nNumberOfCharsToWrite = length of "msg"
-    ;push dword buf                              ; lpBuffer = pointer to "msg"
-    ;push dword [h_stdout]                       ; hConsoleOutput = console handle from GetStdHandle
-    ;call _WriteConsoleA@20                      ; Write string
-
+start_exit:
     push    0                                   ; exit code = 0
     call _ExitProcess@4
 stop: 
@@ -231,6 +210,26 @@ _initHandles:
     mov esp, ebp
     pop ebp
     ret
+
+_printOutputBuf@4: ;len
+    push ebp
+    mov ebp, esp
+    push edx
+    push dword 0
+
+    lea edx, [ebp - 4 -4*1]
+    push dword  0                           ; lpReserved = null
+    push dword edx                          ; lpNumberOfCharsWritten = pointer to "other"
+    push dword [ebp + 8]                    ; nNumberOfCharsToWrite = length of "msg"
+    push dword outputbuf                    ; lpBuffer = pointer to "msg"
+    push dword [h_stdout]                   ; hConsoleOutput = console handle from GetStdHandle
+    call _WriteConsoleA@20                  ; Write string
+
+    add esp, 4
+    pop edx
+    mov esp, ebp
+    pop ebp
+    ret 4
 
 _memset: ;param1: ptr ;param2: byte val ;param3 num of bytes
     push ebp
