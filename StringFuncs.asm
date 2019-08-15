@@ -3,7 +3,7 @@
     global _atoui@4
     global _itoa@8
     global _ftoa@8
-    global _atoi@4
+    global _atoi@8
 
     extern _debug
     extern _printEAX
@@ -20,9 +20,12 @@ DEC_LUT dd 1000000000,100000000,10000000,1000000,100000,10000,1000,100,10,1,0
 
     section .text
 
-_atoi@4: ;param1: arrayptr; return num
+_atoi@8: ;param1: arrayptr; param2: neg return num
     push ebp
     mov ebp, esp
+
+    mov ecx, dword [ebp + 12]
+    mov [ecx], dword 0
 
     ;edx is neg true
 
@@ -40,12 +43,14 @@ atoi_lp:
 
     jmp atoi_lp
 atoi_lp_setneg:
+    mov ecx, [ebp + 12]
+    mov [ecx], dword 1
     neg eax
 atoi_lp_end:
 
     mov esp, ebp
     pop ebp
-    ret 4
+    ret 8
 
 
 
@@ -101,11 +106,24 @@ _ftoa@8: ;buf, float; ret len
     push edi
     sub esp, 8
 
-    mov ebx, [ebp + 8]
-    mov dword [ebp -4*2 - 8], 0
 
+    mov ebx, [ebp + 8]
+ftoa_if1:
+    test dword [ebp + 12], (1<<31)
+    jz ftoa_endif1
+
+    mov byte [ebx], '-'
+    add ebx, dword 1
+
+    and dword [ebp + 12], ~(1<<31)
+
+ftoa_endif1:
+
+    mov dword [ebp -4*2 - 8], 0
     lea edi, [ebp + 12]
     fld dword [edi]
+    
+
     lea edi, [ebp -4*2 - 4]
     fisttp dword [edi]
 

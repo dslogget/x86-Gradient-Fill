@@ -2,12 +2,12 @@
     extern _printEAX
     extern h_stdout
     extern _atoui@4
-    extern _atoi@4
+    extern _atoi@8
     extern _printCRLF
     extern windowHeight
     extern windowWidth
 
-    global _ReadNextNumber@4
+    global _ReadNextNumber@8
     global _LoadTriangles@24 ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
     global _ReadFloat@4
     global _CloseFileHandle@0
@@ -20,7 +20,7 @@
     section .rdata
 filename    db "./test.txt", 0
 fl0_5 dd 0.5
-max_col_intensity dw 0xFF00
+max_col_intensity dd 0xFF00
 
     section .data
 h_file      dd 0
@@ -32,17 +32,33 @@ h_file      dd 0
 _ReadFloat@4: ;filepath
     push ebp
     mov ebp, esp
+    push esi
     
-
+    push dword 0
+    push esp
     push dword [ebp + 8]
-    call _ReadNextNumber@4
+    call _ReadNextNumber@8
 
     push eax
     fild dword [esp]
     pop eax
 
+ReadFloat_if1:
+    cmp eax, dword 0
+    jne ReadFloat_endif1
+    cmp [esp], dword 0
+    je ReadFloat_endif1
+
+    fchs
+
+ReadFloat_endif1:
+
+    ;use sign from last
+    mov esi, dword [esp]
+    push esp
     push dword [ebp + 8]
-    call _ReadNextNumber@4
+    call _ReadNextNumber@8
+    add esp, 4
 
     cmp eax, dword 0
     je ReadFloat_exit
@@ -77,15 +93,26 @@ ReadFloat_lp_end:
     fild dword [esp]
     push eax
     fidiv dword [esp]
+
+ReadFloat_if2:
+    cmp esi, dword 0
+    je ReadFloat_endif2
+
+    fchs
+
+ReadFloat_endif2:
+
     fadd
     add esp, 4
 ReadFloat_exit:
+
+    pop esi
     mov esp, ebp
     pop ebp
     ret 4
 
 
-_ReadNextNumber@4: ;filepath
+_ReadNextNumber@8: ;filepath, neg
     push ebp
     mov ebp, esp
     push esi
@@ -153,9 +180,10 @@ ReadNextNumber_next:
 
     lea eax, [ebp -4*1 - 8 - buflen + esi]
     mov byte [eax], 0
+    push dword [ebp + 12]
     lea eax, [ebp -4*1 - 8 - buflen]
     push dword eax
-    call _atoi@4
+    call _atoi@8
     jmp ReadNextNumber_exit
 ReadNextNumber_endif2: 
 
@@ -186,7 +214,7 @@ ReadNextNumber_exit:
     pop esi
     mov esp, ebp
     pop ebp
-    ret 4
+    ret 8
 
 
 
@@ -201,8 +229,11 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
     call _GetProcessHeap@0
     mov dword [ebp -4*1 - 4], dword eax
 
+    push dword 0
+    push esp
     push filename
-    call _ReadNextNumber@4
+    call _ReadNextNumber@8
+    add esp, 4
 
     mov ecx, dword [ebp + 12]
     mov [ecx], dword eax
@@ -220,8 +251,11 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
 
 
 
+    push dword 0
+    push esp
     push filename
-    call _ReadNextNumber@4
+    call _ReadNextNumber@8
+    add esp, 4
 
     mov ecx, dword [ebp + 20]
     mov [ecx], dword eax
@@ -243,6 +277,8 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
     mov edi, dword [eax]
 
     sub dword [ebp + 8 + 5*4], 30
+    shr dword [ebp + 8 + 5*4], 1
+    shr dword [ebp + 8 + 4*4], 1
     
     LoadTriangles_loop1:
     push ecx
@@ -251,6 +287,7 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
         call _ReadFloat@4
         push dword [ebp + 8 + 4*4]
         fimul dword [esp]
+        fiadd dword [esp]
         fistp dword [edi]
 
         add edi, 4
@@ -259,8 +296,10 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
     ;y
         push filename
         call _ReadFloat@4
+        fchs
         push dword [ebp + 8 + 5*4]
         fimul dword [esp]
+        fiadd dword [esp]
         fistp dword [edi]
         ;sub dword [edi], 25
 
@@ -270,30 +309,42 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
     ;R
         push filename
         call _ReadFloat@4
-        fimul word [max_col_intensity]
-        fistp word [edi]
+        fimul dword [max_col_intensity]
+        push 0
+        fistp dword [esp]
+        pop eax
+        mov word [edi], ax
 
         add edi, 2
 
     ;G
         push filename
         call _ReadFloat@4
-        fimul word [max_col_intensity]
-        fistp word [edi]
+        fimul dword [max_col_intensity]
+        push 0
+        fistp dword [esp]
+        pop eax
+        mov word [edi], ax
 
         add edi, 2
     ;B
         push filename
         call _ReadFloat@4
-        fimul word [max_col_intensity]
-        fistp word [edi]
+        fimul dword [max_col_intensity]
+        push 0
+        fistp dword [esp]
+        pop eax
+        mov word [edi], ax
 
         add edi, 2
     ;A
         push filename
         call _ReadFloat@4
-        fimul word [max_col_intensity]
-        fistp word [edi]
+        fimul dword [max_col_intensity]
+        push 0
+        fistp dword [esp]
+        pop eax
+        mov word [edi], ax
 
         add edi, 2
 
@@ -310,18 +361,27 @@ _LoadTriangles@24: ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, scr
     
     LoadTriangles_loop2:
     push ecx
+        push dword 0
+
+        push esp
         push filename
-        call _ReadNextNumber@4
+        call _ReadNextNumber@8
         mov dword [edi], eax
         add edi, 4
+
+        push esp
         push filename
-        call _ReadNextNumber@4
+        call _ReadNextNumber@8
         mov dword [edi], eax
         add edi, 4
+
+        push esp
         push filename
-        call _ReadNextNumber@4
+        call _ReadNextNumber@8
         mov dword [edi], eax
         add edi, 4
+
+        add esp, 4
     pop ecx
     loop LoadTriangles_loop2
 

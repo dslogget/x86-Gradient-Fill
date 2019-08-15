@@ -4,7 +4,7 @@
     extern _debug
     extern _printEAX
     extern _LoadTriangles@24 ;ppVertices, pnVertices, ppMeshes, pnMeshes, screenwidth, screenheight
-    extern _ReadNextNumber@4
+    extern _ReadNextNumber@8
     extern _CloseFileHandle@0
 
     %include "WIN32N.INC"
@@ -92,18 +92,18 @@ case4:
     call _debug
 skip:
 
-    push dword BLACK_BRUSH
-    call _GetStockObject@4
-    push dword eax
-    push dword [esi]
-    call _SelectObject@8
+    ;push dword BLACK_BRUSH
+    ;call _GetStockObject@4
+    ;push dword eax
+    ;push dword [esi]
+    ;call _SelectObject@8
 
-    push dword 720-27
-    push dword 10
-    push dword 0
-    push dword 0
-    push dword [esi]
-    call _Rectangle@20
+    ;push dword 720-27
+    ;push dword 10
+    ;push dword 0
+    ;push dword 0
+    ;push dword [esi]
+    ;call _Rectangle@20
 
 
     ;Draw Gradient Triangle
@@ -165,20 +165,23 @@ pexit:
 
 
 _init:
-
-    push settingsfile
-    call _ReadNextNumber@4
-    mov [windowWidth], dword eax
-    push settingsfile
-    call _ReadNextNumber@4
-    mov [windowHeight], dword eax
-    call _CloseFileHandle@0
-
-
-
     push ebp
     mov ebp, esp
     push ebx
+
+
+    push dword 0
+    push esp
+    push settingsfile
+    call _ReadNextNumber@8
+    mov [windowWidth], dword eax
+
+    push esp
+    push settingsfile
+    call _ReadNextNumber@8
+    mov [windowHeight], dword eax
+    add esp, 4
+    call _CloseFileHandle@0
     
 
     push dword 0

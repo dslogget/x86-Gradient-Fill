@@ -10,7 +10,7 @@
     %include "WIN32FUNCS.INC"
 
 
-    extern _ReadNextNumber@4
+    extern _ReadNextNumber@8
     extern _atoui@4
     extern _init
     extern _uitoa@8
