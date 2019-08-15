@@ -2,6 +2,7 @@
     extern _printEAX
     extern h_stdout
     extern _atoui@4
+    extern _atoi@4
     extern _printCRLF
     extern windowHeight
     extern windowWidth
@@ -153,7 +154,7 @@ ReadNextNumber_next:
     mov byte [eax], 0
     lea eax, [ebp -4*1 - 8 - buflen]
     push dword eax
-    call _atoui@4
+    call _atoi@4
     jmp ReadNextNumber_exit
 ReadNextNumber_endif2: 
 

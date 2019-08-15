@@ -3,6 +3,7 @@
     global _atoui@4
     global _itoa@8
     global _ftoa@8
+    global _atoi@4
 
     extern _debug
     extern _printEAX
@@ -18,6 +19,36 @@ DEC_LUT dd 1000000000,100000000,10000000,1000000,100000,10000,1000,100,10,1,0
 
 
     section .text
+
+_atoi@4 ;param1: arrayptr; return num
+    push ebp
+    mov ebp, esp
+
+    ;edx is neg true
+
+    push dword [ebp + 8]
+    call _atoui@4
+
+    mov ecx, dword [ebp + 8]
+atoi_lp:
+    cmp [ecx], byte '-'
+    je atoi_lp_setneg
+    cmp [ecx], byte 0
+    je atoi_lp_end
+
+    add ecx, dword 1
+
+    jmp atoi_lp
+atoi_lp_setneg:
+    neg eax
+atoi_lp_end:
+
+    mov esp, ebp
+    pop ebp
+    ret 4
+
+
+
 
 _atoui@4: ;param1: arrayptr; return num
     push ebp
