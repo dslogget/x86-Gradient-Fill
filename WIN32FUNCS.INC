@@ -28,4 +28,10 @@
     extern _HeapAlloc@12
     extern _HeapFree@12
     extern _ReadFile@20
-    
+    extern _CreateCompatibleDC@4
+    extern _CreateCompatibleBitmap@12
+    extern _SelectObject@8
+    extern _DeleteDC@4
+    extern _BitBlt@36
+    extern _GetDC@4
+    extern _RedrawWindow@16

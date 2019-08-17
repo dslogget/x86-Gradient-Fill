@@ -91,47 +91,58 @@ case4:
     call _printEAX
     call _debug
 skip:
+    ;setup screenbuffer
 
-    ;push dword BLACK_BRUSH
-    ;call _GetStockObject@4
-    ;push dword eax
-    ;push dword [esi]
-    ;call _SelectObject@8
+    push dword [esi]
+    call _CreateCompatibleDC@4
+    mov edi, eax
 
-    ;push dword 720-27
-    ;push dword 10
-    ;push dword 0
-    ;push dword 0
-    ;push dword [esi]
-    ;call _Rectangle@20
 
+    push dword [windowHeight]
+    sub dword [esp], 30
+    push dword [windowWidth]
+    push dword [esi]
+    call _CreateCompatibleBitmap@12
+
+    push eax
+    push edi
+    call _SelectObject@8
 
     ;Draw Gradient Triangle
-    
-    push edi
-    mov edi, dword [nVertices]
-    mov eax, dword edi
-    ;call _printEAX
-
-    mov edi, dword [nMeshes]
-
-    mov eax, dword edi
-    ;call _printEAX
-
-    mov edi, dword [pMeshes]
-    mov eax, dword [edi]
-    ;call _printEAX
-
-
-    pop edi
 
     push dword GRADIENT_FILL_TRIANGLE
     push dword [nMeshes]
     push dword [pMeshes]
     push dword [nVertices]
     push dword [pVertices]
-    push dword [esi]
+    push dword edi
     call _GdiGradientFill@24
+
+    cmp eax, 0
+    jne skip2
+    call _GetLastError@0
+    call _printEAX
+    call _debug
+skip2:
+
+    ;bitblt
+    push dword SRCCOPY
+    push dword 0
+    push dword 0
+    push edi
+    push dword [windowHeight]
+    sub [esp], dword 30
+    push dword [windowWidth]
+    push dword 0
+    push dword 0
+    push dword [esi]
+    call _BitBlt@36
+
+    ;deleteDC
+    push edi
+    call _DeleteDC@4
+
+    call _debug
 
 endp:
     push dword esi
@@ -252,6 +263,13 @@ lp:
     call _TranslateMessage@4
     push ebx
     call _DispatchMessageA@4
+
+
+    push dword RDW_INTERNALPAINT|RDW_ERASENOW|RDW_ALLCHILDREN
+    push dword 0
+    push dword 0
+    push dword [ebp + 8]
+    call _RedrawWindow@16
     jmp lp 
 exit:
 
